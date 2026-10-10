@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloud Task Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef4ff;
+      margin: 0;
+      padding: 40px 16px;
+    }
+    main {
+      max-width: 600px;
+      margin: auto;
+      padding: 28px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px #102a5015;
+    }
+    h1 { color: #174ea6; }
+    form { display: flex; gap: 8px; }
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px;
+    }
+    button {
+      padding: 12px 18px;
+      background: #175cd3;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    li { margin: 12px 0; }
+    #status { color: #175cd3; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>☁️ Cloud Task Manager</h1>
+  <p>Powered by AWS Serverless Services</p>
+
+  <form id="taskForm">
+    <input id="taskInput" placeholder="Enter a new task"
+           required maxlength="200">
+    <button type="submit">Add Task</button>
+  </form>
+
+  <p id="status" role="status"></p>
+  <h2>Your Tasks</h2>
+  <ul id="taskList"></ul>
+  <button type="button" onclick="loadTasks()">Refresh Tasks</button>
+</main>
+
+<script>
+  // Replace this with your API Gateway Invoke URL.
+  const API_URL = "	https://k89y8jbfh4.execute-api.us-east-1.amazonaws.com";
+
+  async function loadTasks() {
+    const status = document.getElementById("status");
+    status.textContent = "Loading tasks...";
+
+    try {
+      const res = await fetch(`${API_URL}/tasks`);
+      if (!res.ok) throw new Error("Unable to load tasks");
+
+      const data = await res.json();
+      const list = document.getElementById("taskList");
+      list.replaceChildren();
+
+      (data.items || []).forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item.task;
+        list.appendChild(li);
+      });
+
+      status.textContent = "Tasks loaded.";
+    } catch (error) {
+      status.textContent = "Error loading tasks. Check API and CORS.";
+    }
+  }
+
+  document.getElementById("taskForm").addEventListener(
+    "submit", async event => {
+      event.preventDefault();
+
+      const input = document.getElementById("taskInput");
+      const status = document.getElementById("status");
+
+      try {
+        const res = await fetch(`${API_URL}/tasks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task: input.value.trim() })
+        });
+
+        if (!res.ok) throw new Error("Task could not be saved");
+
+        input.value = "";
+        status.textContent = "Task saved successfully!";
+        await loadTasks();
+      } catch (error) {
+        status.textContent = "Save failed. Check API, CORS and permissions.";
+      }
+    }
+  );
+</script>
+</body>
+</html>
