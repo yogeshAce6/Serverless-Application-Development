@@ -147,3 +147,152 @@ Now open Configuration → Environment variables → Edit and add:
 ![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/c887969a6974778d549a34310f21a53a64219594/images/env%20variable%20.png)
 Save the changes.
 ## Step 3 — Configure API Gateway
+1. Open the API Gateway Console.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/api%20.png)
+2. Select Create API → HTTP API → Build.
+3. API name: CloudTaskAPI.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/api%20http.png)
+4. Add your Lambda function CloudTaskFunction as the integration.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/api%20lambda%20api%20integration%20.png)
+5. Create these routes:
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/api.png)
+
+## Step 4 — Create the frontend website
+Create a folder on your computer named cloud-task-manager. Inside it, create a file named index.html.
+```bash
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cloud Task Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef4ff;
+      margin: 0;
+      padding: 40px 16px;
+    }
+    main {
+      max-width: 600px;
+      margin: auto;
+      padding: 28px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px #102a5015;
+    }
+    h1 { color: #174ea6; }
+    form { display: flex; gap: 8px; }
+    input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px;
+    }
+    button {
+      padding: 12px 18px;
+      background: #175cd3;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    li { margin: 12px 0; }
+    #status { color: #175cd3; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>☁️ Cloud Task Manager</h1>
+  <p>Powered by AWS Serverless Services</p>
+
+  <form id="taskForm">
+    <input id="taskInput" placeholder="Enter a new task"
+           required maxlength="200">
+    <button type="submit">Add Task</button>
+  </form>
+
+  <p id="status" role="status"></p>
+  <h2>Your Tasks</h2>
+  <ul id="taskList"></ul>
+  <button type="button" onclick="loadTasks()">Refresh Tasks</button>
+</main>
+
+<script>
+  // Replace this with your API Gateway Invoke URL.
+  const API_URL = "PASTE_YOUR_API_INVOKE_URL_HERE";
+
+  async function loadTasks() {
+    const status = document.getElementById("status");
+    status.textContent = "Loading tasks...";
+
+    try {
+      const res = await fetch(`${API_URL}/tasks`);
+      if (!res.ok) throw new Error("Unable to load tasks");
+
+      const data = await res.json();
+      const list = document.getElementById("taskList");
+      list.replaceChildren();
+
+      (data.items || []).forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item.task;
+        list.appendChild(li);
+      });
+
+      status.textContent = "Tasks loaded.";
+    } catch (error) {
+      status.textContent = "Error loading tasks. Check API and CORS.";
+    }
+  }
+
+  document.getElementById("taskForm").addEventListener(
+    "submit", async event => {
+      event.preventDefault();
+
+      const input = document.getElementById("taskInput");
+      const status = document.getElementById("status");
+
+      try {
+        const res = await fetch(`${API_URL}/tasks`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task: input.value.trim() })
+        });
+
+        if (!res.ok) throw new Error("Task could not be saved");
+
+        input.value = "";
+        status.textContent = "Task saved successfully!";
+        await loadTasks();
+      } catch (error) {
+        status.textContent = "Save failed. Check API, CORS and permissions.";
+      }
+    }
+  );
+</script>
+</body>
+</html>
+```
+## Important: Replace PASTE_YOUR_API_INVOKE_URL_HERE with your actual API Gateway Invoke URL, without adding /tasks at the end. The code appends that route automatically.
+## Step 5 — Test the application
+Before hosting the website, test the backend in this order:
+1. Open API Gateway and check that the API is deployed.
+2. Check that Lambda has the correct TABLE_NAME environment variable and DynamoDB permissions.
+3. Test GET /tasks and confirm that it returns JSON.
+4. Test POST /tasks with a JSON body such as {"task":"Complete AWS project"}.
+5. Open DynamoDB → CloudTasks → Explore table items and confirm the task was stored.
+6. Open your frontend website and test adding and refreshing tasks.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/Screenshot%202026-10-10%20125135.png)
+## Step 6 — Host the website on Amazon S3
+1. Open the Amazon S3 Console.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/Screenshot%202026-10-10%20135226.png)
+2. Create a globally unique bucket name, for example cloud-task-manager-yourid.
+3. Upload index.html.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/Screenshot%202026-10-10%20135527.png)
+4. For a simple static website test, configure S3 static website hosting and the appropriate public-read bucket policy only if your account permits it.
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/Screenshot%202026-10-10%20125447.png)
+
+For a more secure deployment, keep S3 private and use CloudFront to deliver the website. Enable HTTPS and configure the frontend's CORS origin accordingly.
+## Output 
+![imageAlt](https://github.com/yogeshAce6/Serverless-Application-Development/blob/425757ce44f85a073c063faa7bcfa75b10740677/images/Screenshot%202026-10-10%20125135.png)
